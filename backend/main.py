@@ -22,9 +22,18 @@ app = FastAPI(
 )
 
 # CORS middleware เพื่อให้ frontend เรียกใช้ได้
+# รองรับทั้ง development และ production
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+if allowed_origins == ["*"]:
+    # Development mode - อนุญาตทุก origin
+    cors_origins = ["*"]
+else:
+    # Production mode - อนุญาตเฉพาะ origins ที่กำหนด
+    cors_origins = [origin.strip() for origin in allowed_origins]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # อนุญาตทุก origin (สำหรับ development)
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],

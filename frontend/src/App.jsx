@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import './App.css'
 
-const API_BASE_URL = 'http://localhost:8000'
+// รองรับ environment variable สำหรับ production
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 // Configure axios defaults
 axios.defaults.headers.common['Content-Type'] = 'application/json'
