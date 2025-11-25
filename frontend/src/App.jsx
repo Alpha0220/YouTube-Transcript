@@ -3,7 +3,8 @@ import axios from 'axios'
 import './App.css'
 
 // รองรับ environment variable สำหรับ production
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// ลบ trailing slash เพื่อหลีกเลี่ยง double slash ใน URL
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '')
 
 // Configure axios defaults
 axios.defaults.headers.common['Content-Type'] = 'application/json'
