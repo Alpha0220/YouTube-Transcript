@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import './App.css'
 
@@ -10,47 +10,53 @@ axios.defaults.headers.common['Accept'] = 'application/json'
 
 function App() {
   const [url, setUrl] = useState('')
-  const [languages, setLanguages] = useState(['en'])
+  const [selectedLanguage, setSelectedLanguage] = useState('en')
   const [fileFormat, setFileFormat] = useState('txt')
   const [includeTimestamps, setIncludeTimestamps] = useState(true)
   const [preserveFormatting, setPreserveFormatting] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [loadingLanguages, setLoadingLanguages] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
-  const [availableTranscripts, setAvailableTranscripts] = useState([])
+  const [availableLanguages, setAvailableLanguages] = useState([])
   const [previewData, setPreviewData] = useState(null)
 
-  const handleLanguageChange = (e) => {
-    const value = e.target.value
-    if (e.target.checked) {
-      setLanguages([...languages, value])
-    } else {
-      setLanguages(languages.filter(lang => lang !== value))
-    }
-  }
-
-  const handleListTranscripts = async () => {
+  // ดึงรายการ transcript เมื่อ URL เปลี่ยนและเปิด dropdown
+  const fetchAvailableLanguages = async () => {
     if (!url.trim()) {
-      setError('กรุณากรอก YouTube URL หรือ Video ID')
+      setError('กรุณากรอก YouTube URL หรือ Video ID ก่อน')
       return
     }
 
-    setLoading(true)
+    setLoadingLanguages(true)
     setError(null)
-    setSuccess(null)
 
     try {
       const response = await axios.post(`${API_BASE_URL}/api/transcripts/list`, {
         url: url.trim()
       })
 
-      setAvailableTranscripts(response.data.transcripts || [])
-      setSuccess(`พบ ${response.data.transcripts.length} transcript(s)`)
+      const transcripts = response.data.transcripts || []
+      setAvailableLanguages(transcripts)
+      
+      // ถ้ายังไม่มี selectedLanguage หรือ selectedLanguage ไม่มีในรายการ ให้เลือกภาษาแรก
+      if (transcripts.length > 0) {
+        const hasSelected = transcripts.some(t => t.language_code === selectedLanguage)
+        if (!hasSelected) {
+          setSelectedLanguage(transcripts[0].language_code)
+        }
+      }
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'เกิดข้อผิดพลาด')
-      setAvailableTranscripts([])
+      setError(err.response?.data?.detail || err.message || 'ไม่สามารถดึงรายการ transcript ได้')
+      setAvailableLanguages([])
     } finally {
-      setLoading(false)
+      setLoadingLanguages(false)
+    }
+  }
+
+  const handleLanguageDropdownFocus = () => {
+    if (url.trim() && availableLanguages.length === 0) {
+      fetchAvailableLanguages()
     }
   }
 
@@ -67,7 +73,7 @@ function App() {
     try {
       const response = await axios.post(`${API_BASE_URL}/api/transcripts/preview`, {
         url: url.trim(),
-        languages: languages.length > 0 ? languages : ['en'],
+        languages: [selectedLanguage],
         preserve_formatting: preserveFormatting
       })
 
@@ -87,11 +93,6 @@ function App() {
       return
     }
 
-    if (languages.length === 0) {
-      setError('กรุณาเลือกภาษาอย่างน้อย 1 ภาษา')
-      return
-    }
-
     setLoading(true)
     setError(null)
     setSuccess(null)
@@ -101,7 +102,7 @@ function App() {
         `${API_BASE_URL}/api/transcripts/download`,
         {
           url: url.trim(),
-          languages: languages,
+          languages: [selectedLanguage],
           preserve_formatting: preserveFormatting,
           file_format: fileFormat,
           include_timestamps: includeTimestamps
@@ -141,63 +142,63 @@ function App() {
     }
   }
 
-  const commonLanguages = [
-    { code: 'en', name: 'English' },
-    { code: 'th', name: 'Thai' },
-    { code: 'zh', name: 'Chinese' },
-    { code: 'ja', name: 'Japanese' },
-    { code: 'ko', name: 'Korean' },
-    { code: 'es', name: 'Spanish' },
-    { code: 'fr', name: 'French' },
-    { code: 'de', name: 'German' },
-    { code: 'pt', name: 'Portuguese' },
-    { code: 'ru', name: 'Russian' },
-    { code: 'vi', name: 'Vietnamese' },
-    { code: 'id', name: 'Indonesian' }
-  ]
-
   return (
     <div className="app">
       <div className="container">
         <header className="header">
-          <h1>🎬 YouTube Transcript Downloader</h1>
-          <p>ดึง transcript จาก YouTube และแปลงเป็นไฟล์ต่างๆ</p>
+          <h1>YouTube Transcript</h1>
         </header>
 
         <div className="card">
           <div className="form-group">
-            <label htmlFor="url">YouTube URL หรือ Video ID *</label>
+            <label htmlFor="url">YouTube URL</label>
             <input
               id="url"
               type="text"
-              placeholder="https://www.youtube.com/watch?v=VIDEO_ID หรือ VIDEO_ID"
+              placeholder="https://www.youtube.com/watch?v=..."
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => {
+                setUrl(e.target.value)
+                setAvailableLanguages([]) // Reset เมื่อ URL เปลี่ยน
+                setPreviewData(null)
+              }}
               disabled={loading}
+              className="input-url"
             />
-            <small>ตัวอย่าง: https://www.youtube.com/watch?v=dQw4w9WgXcQ</small>
-          </div>
-
-          <div className="form-group">
-            <label>ภาษา (เลือกได้หลายภาษา)</label>
-            <div className="language-grid">
-              {commonLanguages.map((lang) => (
-                <label key={lang.code} className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    value={lang.code}
-                    checked={languages.includes(lang.code)}
-                    onChange={handleLanguageChange}
-                    disabled={loading}
-                  />
-                  <span>{lang.name} ({lang.code})</span>
-                </label>
-              ))}
-            </div>
-            <small>ระบบจะลองภาษาแรกก่อน ถ้าไม่มีจะใช้ภาษาถัดไป</small>
           </div>
 
           <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="language">ภาษา</label>
+              <select
+                id="language"
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                onFocus={handleLanguageDropdownFocus}
+                disabled={loading || loadingLanguages || !url.trim()}
+                className="select-language"
+              >
+                {loadingLanguages ? (
+                  <option>กำลังโหลด...</option>
+                ) : availableLanguages.length > 0 ? (
+                  availableLanguages.map((lang) => (
+                    <option key={lang.language_code} value={lang.language_code}>
+                      {lang.language} {lang.is_generated ? '(Auto)' : ''}
+                    </option>
+                  ))
+                ) : (
+                  <option value="en">English</option>
+                )}
+              </select>
+              {availableLanguages.length > 0 && (
+                <small className="hint">
+                  {availableLanguages.find(l => l.language_code === selectedLanguage)?.is_generated 
+                    ? '🤖 สร้างอัตโนมัติ' 
+                    : '✍️ สร้างด้วยมือ'}
+                </small>
+              )}
+            </div>
+
             <div className="form-group">
               <label htmlFor="fileFormat">รูปแบบไฟล์</label>
               <select
@@ -205,116 +206,85 @@ function App() {
                 value={fileFormat}
                 onChange={(e) => setFileFormat(e.target.value)}
                 disabled={loading}
+                className="select-format"
               >
-                <option value="txt">TXT (Text File)</option>
-                <option value="pdf">PDF (Portable Document Format)</option>
-                <option value="docx">DOCX (Microsoft Word)</option>
+                <option value="txt">TXT</option>
+                <option value="pdf">PDF</option>
+                <option value="docx">DOCX</option>
               </select>
             </div>
+          </div>
 
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={includeTimestamps}
-                  onChange={(e) => setIncludeTimestamps(e.target.checked)}
-                  disabled={loading}
-                />
-                <span>รวม Timestamps</span>
-              </label>
-            </div>
+          <div className="options-row">
+            <label className="checkbox-option">
+              <input
+                type="checkbox"
+                checked={includeTimestamps}
+                onChange={(e) => setIncludeTimestamps(e.target.checked)}
+                disabled={loading}
+              />
+              <span>รวม Timestamps</span>
+            </label>
 
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={preserveFormatting}
-                  onChange={(e) => setPreserveFormatting(e.target.checked)}
-                  disabled={loading}
-                />
-                <span>เก็บ HTML Formatting</span>
-              </label>
-            </div>
+            <label className="checkbox-option">
+              <input
+                type="checkbox"
+                checked={preserveFormatting}
+                onChange={(e) => setPreserveFormatting(e.target.checked)}
+                disabled={loading}
+              />
+              <span>เก็บ HTML Formatting</span>
+            </label>
           </div>
 
           {error && (
             <div className="alert alert-error">
-              <strong>❌ ข้อผิดพลาด:</strong> {error}
+              {error}
             </div>
           )}
 
           {success && (
             <div className="alert alert-success">
-              <strong>✅ สำเร็จ:</strong> {success}
+              {success}
             </div>
           )}
 
           <div className="button-group">
             <button
               type="button"
-              onClick={handleListTranscripts}
-              disabled={loading || !url.trim()}
-              className="btn btn-secondary"
-            >
-              {loading ? 'กำลังโหลด...' : '📋 ดูรายการ Transcript'}
-            </button>
-
-            <button
-              type="button"
               onClick={handlePreview}
               disabled={loading || !url.trim()}
-              className="btn btn-secondary"
+              className="btn btn-preview"
             >
-              {loading ? 'กำลังโหลด...' : '👁️ Preview'}
+              {loading ? 'กำลังโหลด...' : 'Preview'}
             </button>
 
             <button
               type="button"
               onClick={handleDownload}
-              disabled={loading || !url.trim() || languages.length === 0}
-              className="btn btn-primary"
+              disabled={loading || !url.trim()}
+              className="btn btn-download"
             >
-              {loading ? 'กำลังดาวน์โหลด...' : `⬇️ ดาวน์โหลด (.${fileFormat.toUpperCase()})`}
+              {loading ? 'กำลังดาวน์โหลด...' : 'Download'}
             </button>
           </div>
         </div>
 
-        {availableTranscripts.length > 0 && (
-          <div className="card">
-            <h2>📋 รายการ Transcript ที่มีให้</h2>
-            <div className="transcript-list">
-              {availableTranscripts.map((transcript, index) => (
-                <div key={index} className="transcript-item">
-                  <div className="transcript-header">
-                    <strong>{transcript.language} ({transcript.language_code})</strong>
-                    <span className={`badge ${transcript.is_generated ? 'badge-auto' : 'badge-manual'}`}>
-                      {transcript.is_generated ? '🤖 สร้างอัตโนมัติ' : '✍️ สร้างด้วยมือ'}
-                    </span>
-                  </div>
-                  {transcript.is_translatable && (
-                    <small>สามารถแปลเป็น {transcript.translation_languages.length} ภาษา</small>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {previewData && (
-          <div className="card">
-            <h2>👁️ Preview Transcript</h2>
-            <div className="preview-info">
-              <p><strong>Video ID:</strong> {previewData.video_id}</p>
-              <p><strong>ภาษา:</strong> {previewData.language} ({previewData.language_code})</p>
-              <p><strong>จำนวน Snippets:</strong> {previewData.total_snippets}</p>
-              <p><strong>สร้างอัตโนมัติ:</strong> {previewData.is_generated ? 'ใช่' : 'ไม่ใช่'}</p>
+          <div className="card preview-card">
+            <div className="preview-header">
+              <h2>Preview</h2>
+              <div className="preview-meta">
+                <span>{previewData.language}</span>
+                <span>•</span>
+                <span>{previewData.total_snippets} snippets</span>
+              </div>
             </div>
             <div className="preview-content">
-              <h3>เนื้อหา (แสดง 50 snippets แรก):</h3>
               {previewData.snippets.map((snippet, index) => (
                 <div key={index} className="snippet">
                   <span className="timestamp">
-                    [{Math.floor(snippet.start / 60)}:{(Math.floor(snippet.start % 60)).toString().padStart(2, '0')}]
+                    {Math.floor(snippet.start / 60)}:{(Math.floor(snippet.start % 60)).toString().padStart(2, '0')}
                   </span>
                   <span className="text">{snippet.text}</span>
                 </div>
@@ -328,4 +298,3 @@ function App() {
 }
 
 export default App
-
