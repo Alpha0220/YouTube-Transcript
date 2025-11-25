@@ -34,7 +34,7 @@ ENV/
 *~
 
 # Output files
-*.txt
+
 transcript_*.txt
 
 # OS

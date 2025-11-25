@@ -3,14 +3,31 @@ Transcript Service - บริการสำหรับดึง transcript �
 """
 
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import (
+    TranscriptsDisabled,
+    NoTranscriptFound,
+    VideoUnavailable,
+    YouTubeRequestFailed,
+    RequestBlocked,
+    IpBlocked,
+    CouldNotRetrieveTranscript
+)
 from typing import List, Optional
+import os
 
 
 class TranscriptService:
     """Service สำหรับจัดการ transcript"""
     
     def __init__(self):
-        self.api = YouTubeTranscriptApi()
+        # รองรับ cookies จาก environment variable (ถ้ามี)
+        # วิธีได้ cookies: เปิด YouTube ใน browser → F12 → Application → Cookies → คัดลอก cookies
+        cookies = os.getenv("YOUTUBE_COOKIES", None)
+        if cookies:
+            # cookies ควรเป็น list ของ dict หรือ string
+            self.api = YouTubeTranscriptApi(cookies=cookies)
+        else:
+            self.api = YouTubeTranscriptApi()
     
     def extract_video_id(self, url_or_id: str) -> str:
         """
@@ -52,7 +69,10 @@ class TranscriptService:
             preserve_formatting: เก็บ HTML formatting หรือไม่
         
         Returns:
-            FetchedTranscript object หรือ None ถ้าเกิดข้อผิดพลาด
+            FetchedTranscript object
+        
+        Raises:
+            Exception: ถ้าเกิดข้อผิดพลาดในการดึง transcript
         """
         try:
             if languages:
@@ -66,8 +86,47 @@ class TranscriptService:
                     video_id,
                     preserve_formatting=preserve_formatting
                 )
+        except TranscriptsDisabled:
+            raise Exception("Video นี้ปิดการใช้งาน transcripts")
+        except NoTranscriptFound:
+            raise Exception("ไม่พบ transcript สำหรับ video นี้")
+        except VideoUnavailable:
+            raise Exception("Video ไม่พร้อมใช้งานหรือถูกลบ")
+        except (RequestBlocked, IpBlocked) as e:
+            error_msg = str(e)
+            raise Exception(
+                "YouTube กำลังบล็อกการเข้าถึงจาก IP นี้ (มักเกิดจาก cloud provider)\n"
+                "วิธีแก้ไข:\n"
+                "1. ใช้ cookies จาก browser (ตั้งค่า YOUTUBE_COOKIES environment variable)\n"
+                "2. ใช้ proxy service\n"
+                "3. ลองใหม่ในภายหลัง\n"
+                f"รายละเอียด: {error_msg}"
+            )
+        except YouTubeRequestFailed as e:
+            error_msg = str(e)
+            if "IP" in error_msg or "blocked" in error_msg.lower():
+                raise Exception(
+                    "YouTube กำลังบล็อกการเข้าถึงจาก IP นี้ (มักเกิดจาก cloud provider)\n"
+                    "วิธีแก้ไข:\n"
+                    "1. ใช้ cookies จาก browser (ตั้งค่า YOUTUBE_COOKIES environment variable)\n"
+                    "2. ใช้ proxy service\n"
+                    "3. ลองใหม่ในภายหลัง\n"
+                    f"รายละเอียด: {error_msg}"
+                )
+            raise Exception(f"ไม่สามารถดึง transcript ได้: {error_msg}")
         except Exception as e:
-            raise Exception(f"ไม่สามารถดึง transcript ได้: {str(e)}")
+            error_msg = str(e)
+            if "IP" in error_msg or "blocked" in error_msg.lower():
+                raise Exception(
+                    "YouTube กำลังบล็อกการเข้าถึงจาก IP นี้\n"
+                    "นี่เป็นปัญหาที่พบบ่อยเมื่อ deploy บน cloud providers (Render, AWS, GCP, etc.)\n"
+                    "วิธีแก้ไข:\n"
+                    "1. เพิ่ม YOUTUBE_COOKIES environment variable ใน Render\n"
+                    "2. ใช้ proxy service\n"
+                    "3. ลองใหม่ในภายหลัง\n"
+                    f"รายละเอียด: {error_msg}"
+                )
+            raise Exception(f"ไม่สามารถดึง transcript ได้: {error_msg}")
     
     def list_transcripts(self, video_id: str):
         """
@@ -78,9 +137,49 @@ class TranscriptService:
         
         Returns:
             TranscriptList object
+        
+        Raises:
+            Exception: ถ้าเกิดข้อผิดพลาดในการดึงรายการ transcript
         """
         try:
             return self.api.list(video_id)
+        except TranscriptsDisabled:
+            raise Exception("Video นี้ปิดการใช้งาน transcripts")
+        except VideoUnavailable:
+            raise Exception("Video ไม่พร้อมใช้งานหรือถูกลบ")
+        except (RequestBlocked, IpBlocked) as e:
+            error_msg = str(e)
+            raise Exception(
+                "YouTube กำลังบล็อกการเข้าถึงจาก IP นี้ (มักเกิดจาก cloud provider)\n"
+                "วิธีแก้ไข:\n"
+                "1. ใช้ cookies จาก browser (ตั้งค่า YOUTUBE_COOKIES environment variable)\n"
+                "2. ใช้ proxy service\n"
+                "3. ลองใหม่ในภายหลัง\n"
+                f"รายละเอียด: {error_msg}"
+            )
+        except YouTubeRequestFailed as e:
+            error_msg = str(e)
+            if "IP" in error_msg or "blocked" in error_msg.lower():
+                raise Exception(
+                    "YouTube กำลังบล็อกการเข้าถึงจาก IP นี้ (มักเกิดจาก cloud provider)\n"
+                    "วิธีแก้ไข:\n"
+                    "1. ใช้ cookies จาก browser (ตั้งค่า YOUTUBE_COOKIES environment variable)\n"
+                    "2. ใช้ proxy service\n"
+                    "3. ลองใหม่ในภายหลัง\n"
+                    f"รายละเอียด: {error_msg}"
+                )
+            raise Exception(f"ไม่สามารถดึงรายการ transcript ได้: {error_msg}")
         except Exception as e:
-            raise Exception(f"ไม่สามารถดึงรายการ transcript ได้: {str(e)}")
+            error_msg = str(e)
+            if "IP" in error_msg or "blocked" in error_msg.lower():
+                raise Exception(
+                    "YouTube กำลังบล็อกการเข้าถึงจาก IP นี้\n"
+                    "นี่เป็นปัญหาที่พบบ่อยเมื่อ deploy บน cloud providers (Render, AWS, GCP, etc.)\n"
+                    "วิธีแก้ไข:\n"
+                    "1. เพิ่ม YOUTUBE_COOKIES environment variable ใน Render\n"
+                    "2. ใช้ proxy service\n"
+                    "3. ลองใหม่ในภายหลัง\n"
+                    f"รายละเอียด: {error_msg}"
+                )
+            raise Exception(f"ไม่สามารถดึงรายการ transcript ได้: {error_msg}")
 
