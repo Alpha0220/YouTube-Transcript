@@ -24,10 +24,47 @@ class TranscriptService:
         # วิธีได้ cookies: เปิด YouTube ใน browser → F12 → Application → Cookies → คัดลอก cookies
         cookies = os.getenv("YOUTUBE_COOKIES", None)
         if cookies:
-            # cookies ควรเป็น list ของ dict หรือ string
-            self.api = YouTubeTranscriptApi(cookies=cookies)
+            # Parse cookies string format (cookie1=value1; cookie2=value2) เป็น list ของ dict
+            cookies_list = self._parse_cookies(cookies)
+            self.api = YouTubeTranscriptApi(cookies=cookies_list)
         else:
             self.api = YouTubeTranscriptApi()
+    
+    def _parse_cookies(self, cookies_string: str) -> List[dict]:
+        """
+        Parse cookies string format เป็น list ของ dict
+        
+        Args:
+            cookies_string: Cookies ในรูปแบบ string เช่น "cookie1=value1; cookie2=value2"
+        
+        Returns:
+            List ของ dict เช่น [{"name": "cookie1", "value": "value1"}, ...]
+        """
+        cookies_list = []
+        if not cookies_string or not cookies_string.strip():
+            return cookies_list
+        
+        # แยก cookies ด้วย semicolon
+        cookie_pairs = cookies_string.split(';')
+        
+        for pair in cookie_pairs:
+            pair = pair.strip()
+            if not pair:
+                continue
+            
+            # แยก name และ value ด้วย =
+            if '=' in pair:
+                name, value = pair.split('=', 1)  # split แค่ครั้งแรก
+                name = name.strip()
+                value = value.strip()
+                
+                if name and value:
+                    cookies_list.append({
+                        "name": name,
+                        "value": value
+                    })
+        
+        return cookies_list
     
     def extract_video_id(self, url_or_id: str) -> str:
         """
