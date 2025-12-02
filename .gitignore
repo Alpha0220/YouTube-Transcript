@@ -41,3 +41,5 @@ transcript_*.txt
 .DS_Store
 Thumbs.db
 
+# Next.js
+frontend/.next/
