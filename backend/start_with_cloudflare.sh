@@ -75,18 +75,18 @@ if [ "$TUNNEL_MODE" = "named" ]; then
     TUNNEL_NAME=${TUNNEL_NAME:-youtube-transcript-backend}
     echo -e "${YELLOW}📝 ใช้ Named Tunnel: $TUNNEL_NAME${NC}"
     echo "   (URL จะคงที่ แต่ต้อง setup ก่อน)"
-    cloudflared tunnel --url http://localhost:$BACKEND_PORT > /tmp/cloudflared.log 2>&1 &
+    cloudflared tunnel --protocol http2 --url http://localhost:$BACKEND_PORT > /tmp/cloudflared.log 2>&1 &
     CLOUDFLARED_PID=$!
 else
     # Quick tunnel (URL เปลี่ยนทุกครั้ง แต่ setup ง่าย)
     echo -e "${YELLOW}📝 ใช้ Quick Tunnel${NC}"
     echo "   (URL จะเปลี่ยนทุกครั้งที่รันใหม่)"
-    cloudflared tunnel --url http://localhost:$BACKEND_PORT > /tmp/cloudflared.log 2>&1 &
+    cloudflared tunnel --protocol http2 --url http://localhost:$BACKEND_PORT > /tmp/cloudflared.log 2>&1 &
     CLOUDFLARED_PID=$!
 fi
 
-# รอให้ tunnel เริ่มทำงาน
-sleep 5
+# รอให้ tunnel เริ่มทำงาน (ต้องรอนานพอให้ได้ URL)
+sleep 15
 
 # ดึง public URL จาก log
 CLOUDFLARE_URL=$(grep -o 'https://[^ ]*\.trycloudflare\.com' /tmp/cloudflared.log | head -1)
