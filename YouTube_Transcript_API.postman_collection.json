@@ -1,0 +1,305 @@
+{
+	"info": {
+		"_postman_id": "youtube-transcript-api-collection",
+		"name": "YouTube Transcript API",
+		"description": "Postman collection สำหรับ YouTube Transcript API Backend\n\nEndpoints:\n- GET / - API information\n- GET /api/health - Health check\n- POST /api/transcripts/list - List available transcripts\n- POST /api/transcripts/preview - Preview transcript\n- POST /api/transcripts/download - Download transcript as file",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Root & Health",
+			"item": [
+				{
+					"name": "Get API Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "Get API information and available endpoints"
+					},
+					"response": []
+				},
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"health"
+							]
+						},
+						"description": "Check if API is healthy and running"
+					},
+					"response": []
+				}
+			],
+			"description": "Basic endpoints for API information and health check"
+		},
+		{
+			"name": "Transcripts",
+			"item": [
+				{
+					"name": "List Available Transcripts",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"https://www.youtube.com/watch?v=dQw4w9WgXcQ\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transcripts/list",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transcripts",
+								"list"
+							]
+						},
+						"description": "Get list of available transcripts for a YouTube video\n\n**Parameters:**\n- `url` (string, required): YouTube URL or Video ID\n\n**Example URLs:**\n- `https://www.youtube.com/watch?v=dQw4w9WgXcQ`\n- `https://youtu.be/dQw4w9WgXcQ`\n- `dQw4w9WgXcQ`"
+					},
+					"response": []
+				},
+				{
+					"name": "Preview Transcript",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"https://www.youtube.com/watch?v=dQw4w9WgXcQ\",\n  \"languages\": [\"en\"],\n  \"preserve_formatting\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transcripts/preview",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transcripts",
+								"preview"
+							]
+						},
+						"description": "Preview transcript as JSON (shows first 50 snippets)\n\n**Parameters:**\n- `url` (string, required): YouTube URL or Video ID\n- `languages` (array, optional): List of language codes (e.g., [\"th\", \"en\"]). Default: [\"en\"]\n- `preserve_formatting` (boolean, optional): Preserve HTML formatting. Default: false"
+					},
+					"response": []
+				},
+				{
+					"name": "Preview Transcript (Thai)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"https://www.youtube.com/watch?v=dQw4w9WgXcQ\",\n  \"languages\": [\"th\", \"en\"],\n  \"preserve_formatting\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transcripts/preview",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transcripts",
+								"preview"
+							]
+						},
+						"description": "Preview transcript in Thai (falls back to English if Thai not available)"
+					},
+					"response": []
+				},
+				{
+					"name": "Download Transcript (TXT)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"https://www.youtube.com/watch?v=dQw4w9WgXcQ\",\n  \"languages\": [\"en\"],\n  \"file_format\": \"txt\",\n  \"include_timestamps\": true,\n  \"preserve_formatting\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transcripts/download",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transcripts",
+								"download"
+							]
+						},
+						"description": "Download transcript as TXT file\n\n**Parameters:**\n- `url` (string, required): YouTube URL or Video ID\n- `languages` (array, optional): List of language codes. Default: [\"en\"]\n- `file_format` (string, optional): File format (txt, pdf, doc). Default: \"txt\"\n- `include_timestamps` (boolean, optional): Include timestamps. Default: true\n- `preserve_formatting` (boolean, optional): Preserve HTML formatting. Default: false"
+					},
+					"response": []
+				},
+				{
+					"name": "Download Transcript (PDF)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"https://www.youtube.com/watch?v=dQw4w9WgXcQ\",\n  \"languages\": [\"en\"],\n  \"file_format\": \"pdf\",\n  \"include_timestamps\": true,\n  \"preserve_formatting\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transcripts/download",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transcripts",
+								"download"
+							]
+						},
+						"description": "Download transcript as PDF file"
+					},
+					"response": []
+				},
+				{
+					"name": "Download Transcript (DOCX)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"https://www.youtube.com/watch?v=dQw4w9WgXcQ\",\n  \"languages\": [\"en\"],\n  \"file_format\": \"docx\",\n  \"include_timestamps\": true,\n  \"preserve_formatting\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transcripts/download",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transcripts",
+								"download"
+							]
+						},
+						"description": "Download transcript as DOCX (Word) file"
+					},
+					"response": []
+				},
+				{
+					"name": "Download Transcript (No Timestamps)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"url\": \"https://www.youtube.com/watch?v=dQw4w9WgXcQ\",\n  \"languages\": [\"en\"],\n  \"file_format\": \"txt\",\n  \"include_timestamps\": false,\n  \"preserve_formatting\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transcripts/download",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transcripts",
+								"download"
+							]
+						},
+						"description": "Download transcript without timestamps"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing YouTube transcripts"
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	]
+}
+

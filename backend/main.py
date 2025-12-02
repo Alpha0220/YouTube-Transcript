@@ -3,14 +3,16 @@ YouTube Transcript API Backend Service
 FastAPI backend สำหรับดึง transcript และแปลงเป็นไฟล์ต่างๆ
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional
 import os
 import tempfile
 from datetime import datetime
+import re
 
 from services.transcript_service import TranscriptService
 from services.file_converter import FileConverter
@@ -31,11 +33,28 @@ else:
     # Production mode - อนุญาตเฉพาะ origins ที่กำหนด
     cors_origins = [origin.strip() for origin in allowed_origins]
 
+# Middleware เพื่อจัดการ double slash ใน URL
+class NormalizePathMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # แทนที่ double slash ด้วย single slash (ยกเว้นหลัง protocol เช่น http://)
+        path = request.url.path
+        normalized_path = re.sub(r'/+', '/', path)
+        
+        # ถ้า path เปลี่ยน ให้ redirect
+        if path != normalized_path:
+            new_url = request.url.replace(path=normalized_path)
+            return RedirectResponse(url=str(new_url), status_code=301)
+        
+        response = await call_next(request)
+        return response
+
+app.add_middleware(NormalizePathMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
@@ -60,15 +79,19 @@ class ListTranscriptsRequest(BaseModel):
 
 
 @app.get("/")
+@app.head("/")
 async def root():
-    """Root endpoint"""
+    """Root endpoint - รองรับทั้ง GET และ HEAD methods"""
     return {
         "message": "YouTube Transcript API Backend",
         "version": "1.0.0",
         "endpoints": {
             "GET /": "API information",
             "POST /api/transcripts/list": "List available transcripts",
-            "POST /api/transcripts/download": "Download transcript as file"
+            "POST /api/transcripts/preview": "Preview transcript",
+            "POST /api/transcripts/download": "Download transcript as file",
+            "GET /docs": "Swagger UI documentation",
+            "GET /redoc": "ReDoc documentation"
         }
     }
 
